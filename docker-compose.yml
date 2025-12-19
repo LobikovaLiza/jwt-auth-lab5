@@ -1,0 +1,24 @@
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: test_admin
+      POSTGRES_PASSWORD: test_1234
+      POSTGRES_DB: test_lab4_1
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: test_admin
+      DB_PASSWORD: test_1234
+      DB_NAME: test_lab4_1
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
