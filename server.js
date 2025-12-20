@@ -89,11 +89,11 @@ const PORT = process.env.PORT || 8080;
 async function startServer() {
   try {
     // Синхронизация БД (force: true только для разработки!)
-    // await db.sequelize.sync({ force: true });
-    // console.log('Database synchronized');
+    await db.sequelize.sync({ force: true });
+    console.log('Database synchronized');
 
     // Инициализация ролей
-    // initial();
+    initial();
 
     // Запуск сервера
     app.listen(PORT, () => {
