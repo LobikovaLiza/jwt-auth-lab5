@@ -23,34 +23,40 @@ jobs:
 
   # 2. Деплой на Staging (Preview) окружение
   deploy-to-staging:
-    runs-on: ubuntu-latest
-    needs: build-and-unit-test
-    environment:
-      name: staging
-      url: ${{ steps.deploy.outputs.url }} # URL превью-деплоя
-    steps:
-      - uses: actions/checkout@v4
-      - name: Deploy to Vercel (Preview)
-        id: deploy
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--confirm' # Деплой в Preview
+  runs-on: ubuntu-latest
+  needs: build-and-unit-test
+  outputs:
+    deployment-url: ${{ steps.deploy.outputs.url }}
+  environment:
+    name: staging
+  steps:
+    - uses: actions/checkout@v4
+    - name: Deploy to Vercel (Preview)
+      id: deploy
+      uses: amondnet/vercel-action@v25
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        vercel-args: '--confirm'
+    - name: Show deployment URL
+      run: echo "Deployed to: ${{ steps.deploy.outputs.url }}"
 
   # 3. Интеграционные тесты на Staging окружении
   integration-test-on-staging:
-    runs-on: ubuntu-latest
-    needs: deploy-to-staging
-    steps:
-      - name: Run Integration Tests against Staging API
-        run: |
-          STAGING_URL=${{ needs.deploy-to-staging.outputs.url }}
-          echo "Testing API at: $STAGING_URL"
-          # Запустите ваши интеграционные тесты, используя этот URL
-          # Например, с помощью newman, jest или простого curl
-          curl -f "$STAGING_URL/api/test/all" || exit 1
+  runs-on: ubuntu-latest
+  needs: deploy-to-staging
+  steps:
+    - name: Run Integration Tests against Staging API
+      env:
+        STAGING_URL: ${{ needs.deploy-to-staging.outputs.deployment-url }}
+      run: |
+        echo "Testing API at: $STAGING_URL"
+        # Проверка health endpoint
+        curl -f "$STAGING_URL/health" || exit 1
+        # Проверка public endpoint
+        curl -f "$STAGING_URL/api/test/all" || exit 1
+        echo "✅ All integration tests passed"
 
   # 4. Деплой в Production (после успеха всех тестов)
   deploy-to-production:
