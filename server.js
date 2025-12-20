@@ -47,12 +47,7 @@ const db = require("./app/models");
 const Role = db.role;
 
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    service: 'JWT Auth API',
-    environment: process.env.NODE_ENV || 'development'
-  });
+  res.status(200).send('OK'); // Просто текст, без JSON
 });
 
 // Основной маршрут
