@@ -64,11 +64,28 @@ jobs:
           STAGING_URL: ${{ needs.deploy-to-staging.outputs.deployment-url }}
         run: |
           echo "Testing API at: $STAGING_URL"
-          # Проверка health endpoint
-          curl -f "$STAGING_URL/health" || exit 1
-          # Проверка public endpoint
-          curl -f "$STAGING_URL/api/test/all" || exit 1
-          echo "✅ All integration tests passed"
+    
+          # 1. Проверяем корневой маршрут (гарантированно публичный)
+          echo "Testing root endpoint (/)..."
+          if curl -s -f "$STAGING_URL/" > /dev/null; then
+            echo "✅ Root endpoint is accessible"
+          else
+            echo "❌ Root endpoint failed"
+            exit 1
+          fi
+    
+          # 2. Проверяем публичный тестовый маршрут
+          echo "Testing public API endpoint (/api/test/all)..."
+          RESPONSE=$(curl -s -f "$STAGING_URL/api/test/all")
+          if [ $? -eq 0 ] && echo "$RESPONSE" | grep -q "Public Content"; then
+            echo "✅ Public API endpoint works correctly"
+            echo "Response: $RESPONSE"
+          else
+            echo "❌ Public API endpoint failed or returned unexpected content"
+            exit 1
+          fi
+    
+          echo "✅ All integration tests passed successfully"
 
   # 4. Деплой в Production (после успеха всех тестов)
   deploy-to-production:
