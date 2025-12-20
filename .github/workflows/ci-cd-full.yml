@@ -31,22 +31,28 @@ deploy-to-staging:
     name: staging
   steps:
     - uses: actions/checkout@v4
+    
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with: { node-version: '18' }
+    
     - name: Deploy to Vercel Preview
       id: deploy
       run: |
-        # Деплой и получение URL одной командой
-        DEPLOYMENT_URL=$(npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --confirm --scope=${{ secrets.VERCEL_ORG_ID }})
+        # Деплой и получение URL
+        DEPLOYMENT_URL=$(npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --confirm)
         echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
-        echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-    - name: Get deployment URL
+        echo "URL for debugging: $DEPLOYMENT_URL"
+    
+    - name: Get deployment URL for output
       id: get-url
       run: |
-        echo "deployment-url=${{ env.DEPLOYMENT_URL }}" >> $GITHUB_OUTPUT
+        echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+    
     - name: Show deployment URL
-      run: echo "Deployed to: ${{ env.DEPLOYMENT_URL }}"
+      run: |
+        echo "Deployed to: $DEPLOYMENT_URL"
+        echo "Debug: DEPLOYMENT_URL variable contains: '$DEPLOYMENT_URL'"
 
   # 3. Интеграционные тесты на Staging окружении
   integration-test-on-staging:
