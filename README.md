@@ -1,5 +1,10 @@
 docker-compose up --build
 
+git:
+git add .
+git commit -m "4"   
+git push
+
 (GET)http://localhost:8080/api/test/all
 
 (GET)http://localhost:8080/api/test/user
