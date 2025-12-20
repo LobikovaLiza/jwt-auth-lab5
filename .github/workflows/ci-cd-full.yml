@@ -37,7 +37,7 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--yes' # Деплой в Preview
+          vercel-args: '--confirm' # Деплой в Preview
 
   # 3. Интеграционные тесты на Staging окружении
   integration-test-on-staging:
@@ -67,7 +67,7 @@ jobs:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod --yes' # Ключ --prod для продакшн-деплоя
+          vercel-args: '--prod --confirm' # Ключ --prod для продакшн-деплоя
 
   # 5. Базовая проверка мониторинга (Health Check)
   post-deploy-monitoring:
