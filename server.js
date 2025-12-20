@@ -23,6 +23,7 @@ app.get('/health', (req, res) => {
     environment: process.env.NODE_ENV || 'development'
   });
 });
+
 // Основной маршрут
 app.get("/", (req, res) => {
   res.json({
