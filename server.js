@@ -23,6 +23,14 @@ app.get("/", (req, res) => {
   });
 });
 
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    service: 'JWT Auth API'
+  });
+});
+
 // Подключение маршрутов
 require('./app/routes/auth.routes')(app);
 require('./app/routes/user.routes')(app);

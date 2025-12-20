@@ -12,3 +12,4 @@ coverage/
 *.log
 docker-compose.override.yml
 pgdata/
+.vercel
