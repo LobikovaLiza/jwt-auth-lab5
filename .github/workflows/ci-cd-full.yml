@@ -1,7 +1,9 @@
-name: Full CI/CD Pipeline
+name: Pure GitHub CI/CD Pipeline
 
 on:
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
 
 jobs:
@@ -21,95 +23,102 @@ jobs:
           NODE_ENV: test
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
-  # 2. Деплой на Staging (Preview) окружение
-  deploy-to-staging:
+  # 2. Запуск "Staging" сервера и интеграционные тесты
+  integration-test:
     runs-on: ubuntu-latest
     needs: build-and-unit-test
-    outputs:
-      deployment-url: ${{ steps.get-url.outputs.deployment-url }}
-    environment:
-      name: staging
+    services:
+      # Запускаем PostgreSQL в контейнере для тестов (опционально)
+      postgres:
+        image: postgres:13
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v4
-    
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with: { node-version: '18' }
-    
-      - name: Deploy to Vercel Preview
-        id: deploy
+      - name: Install Dependencies
+        run: npm ci
+      - name: Start Server in Background
         run: |
-          # Деплой и получение URL
-          DEPLOYMENT_URL=$(npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --confirm)
-          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
-          echo "URL for debugging: $DEPLOYMENT_URL"
-    
-      - name: Get deployment URL for output
-        id: get-url
+          # Устанавливаем переменные окружения для локального сервера
+          export NODE_ENV=test
+          export DB_HOST=localhost
+          export DB_USER=postgres
+          export DB_PASSWORD=postgres
+          export DB_NAME=test_db
+          export JWT_SECRET=test-jwt-secret-for-ci
+          # Запускаем сервер в фоне. Флаг -A для избежания блокировки.
+          nohup node server.js > server.log 2>&1 &
+          echo $! > server.pid
+          sleep 5 # Даем серверу время на запуск
+          echo "Server started. Checking logs:"
+          cat server.log
+      - name: Run Integration Tests
         run: |
-          echo "deployment-url=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-    
-      - name: Show deployment URL
+          # Запускаем интеграционные тесты против локального сервера
+          npm run test:integration
+          # ИЛИ явно: npx jest __tests__/integration/ --testEnvironment=node
+      - name: Stop Background Server
+        if: always() # Останавливаем сервер в любом случае
         run: |
-          echo "Deployed to: $DEPLOYMENT_URL"
-          echo "Debug: DEPLOYMENT_URL variable contains: '$DEPLOYMENT_URL'"
-
-  # 3. Интеграционные тесты на Staging окружении
-  integration-test-on-staging:
-    runs-on: ubuntu-latest
-    needs: deploy-to-staging
-    steps:
-      - name: Run Integration Tests against Staging API
-        env:
-          STAGING_URL: ${{ needs.deploy-to-staging.outputs.deployment-url }}
-        run: |
-          echo "Testing API at: $STAGING_URL"
-    
-          # 1. Проверяем корневой маршрут (гарантированно публичный)
-          echo "Testing root endpoint (/)..."
-          if curl -s -f "$STAGING_URL/" > /dev/null; then
-            echo "✅ Root endpoint is accessible"
-          else
-            echo "❌ Root endpoint failed"
-            exit 1
+          if [ -f server.pid ]; then
+            kill $(cat server.pid) 2>/dev/null || true
+            rm -f server.pid
           fi
-    
-          # 2. Проверяем публичный тестовый маршрут
-          echo "Testing public API endpoint (/api/test/all)..."
-          RESPONSE=$(curl -s -f "$STAGING_URL/api/test/all")
-          if [ $? -eq 0 ] && echo "$RESPONSE" | grep -q "Public Content"; then
-            echo "✅ Public API endpoint works correctly"
-            echo "Response: $RESPONSE"
-          else
-            echo "❌ Public API endpoint failed or returned unexpected content"
-            exit 1
-          fi
-    
-          echo "✅ All integration tests passed successfully"
+      - name: Upload Server Logs (for debugging)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-logs
+          path: server.log
 
-  # 4. Деплой в Production (после успеха всех тестов)
-  deploy-to-production:
+  # 3. Создание артефакта (условный "деплой")
+  create-artifact:
     runs-on: ubuntu-latest
-    needs: integration-test-on-staging
-    environment:
-      name: production
-      url: https://jwt-auth-lab5.vercel.app # Замените на ваш реальный URL
+    needs: integration-test
     steps:
       - uses: actions/checkout@v4
-      - name: Deploy to Vercel (Production)
-        uses: amondnet/vercel-action@v25
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod --confirm'
-
-  # 5. Базовая проверка мониторинга (Health Check)
-  post-deploy-monitoring:
-    runs-on: ubuntu-latest
-    needs: deploy-to-production
-    steps:
-      - name: Health Check Production
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with: { node-version: '18' }
+      - name: Install Dependencies (production only)
+        run: npm ci --only=production
+      - name: Create Deployment Artifact
         run: |
-          curl -f "https://jwt-auth-lab5.vercel.app/health" || exit 1
-          echo "✅ Production health check passed"
+          # Создаем чистую папку с кодом для "деплоя"
+          mkdir -p deploy_artifact
+          # Копируем только необходимое (исключаем тесты, конфиги для разработки)
+          cp -r app server.js package.json deploy_artifact/
+          # Можно добавить дополнительные шаги: минификацию, сборку и т.д.
+          echo "Artifact created at $(pwd)/deploy_artifact"
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-deployment-bundle
+          path: deploy_artifact/
+          retention-days: 7
+
+  # 4. Условный "Production Deploy" (имитация)
+  # В реальности здесь может быть скрипт, загружающий артефакт на ваш сервер.
+  # Для демонстрации просто отметим успех.
+  deploy-success:
+    runs-on: ubuntu-latest
+    needs: create-artifact
+    environment: production # Используем Environments GitHub для наглядности
+    steps:
+      - name: Simulate Production Deployment
+        run: |
+          echo "✅ All checks passed! The artifact is ready for deployment."
+          echo "In a real scenario, the code from the 'app-deployment-bundle' artifact"
+          echo "would now be deployed to the production server (e.g., via SSH, FTP, etc.)."

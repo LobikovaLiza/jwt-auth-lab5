@@ -4,42 +4,43 @@ const cors = require("cors");
 
 const app = express();
 
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Разрешаем:
-    // 1. Запросы без origin (например, curl, Postman, серверные запросы)
-    // 2. Локальный development (localhost:8081)
-    // 3. Все поддомены Vercel (ваше staging и production окружение)
-    // 4. Другие домены, которые могут понадобиться
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     // Разрешаем:
+//     // 1. Запросы без origin (например, curl, Postman, серверные запросы)
+//     // 2. Локальный development (localhost:8081)
+//     // 3. Все поддомены Vercel (ваше staging и production окружение)
+//     // 4. Другие домены, которые могут понадобиться
 
-    const allowedOrigins = [
-      'http://localhost:8081',
-      /\.vercel\.app$/, // Все домены Vercel
-      'https://jwt-auth-lab5.vercel.app', // Ваш production URL
-    ];
+//     const allowedOrigins = [
+//       'http://localhost:8081',
+//       /\.vercel\.app$/, // Все домены Vercel
+//       'https://jwt-auth-lab5.vercel.app', // Ваш production URL
+//     ];
 
-    if (!origin) return callback(null, true); // Разрешаем запросы без origin
+//     if (!origin) return callback(null, true); // Разрешаем запросы без origin
 
-    for (const allowedOrigin of allowedOrigins) {
-      if (typeof allowedOrigin === 'string') {
-        if (origin === allowedOrigin) return callback(null, true);
-      } else if (allowedOrigin.test(origin)) {
-        return callback(null, true); // Регулярное выражение для Vercel
-      }
-    }
+//     for (const allowedOrigin of allowedOrigins) {
+//       if (typeof allowedOrigin === 'string') {
+//         if (origin === allowedOrigin) return callback(null, true);
+//       } else if (allowedOrigin.test(origin)) {
+//         return callback(null, true); // Регулярное выражение для Vercel
+//       }
+//     }
 
-    // Для остальных запросов можно вернуть ошибку или разрешить (для тестов)
-    // Для демонстрации CI/CD разрешим все
-    return callback(null, true);
+//     // Для остальных запросов можно вернуть ошибку или разрешить (для тестов)
+//     // Для демонстрации CI/CD разрешим все
+//     return callback(null, true);
 
-    // В production лучше вернуть ошибку:
-    // return callback(new Error('Not allowed by CORS'));
-  },
-  credentials: true,
-  optionsSuccessStatus: 200
-};
+//     // В production лучше вернуть ошибку:
+//     // return callback(new Error('Not allowed by CORS'));
+//   },
+//   credentials: true,
+//   optionsSuccessStatus: 200
+// };
 
-app.use(cors(corsOptions));
+
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
