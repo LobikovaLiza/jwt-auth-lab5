@@ -15,19 +15,19 @@ app.use(express.urlencoded({ extended: true }));
 const db = require("./app/models");
 const Role = db.role;
 
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    service: 'JWT Auth API',
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
 // Основной маршрут
 app.get("/", (req, res) => {
   res.json({
     message: "JWT Authentication API - Test lab 4",
     status: "running"
-  });
-});
-
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    service: 'JWT Auth API'
   });
 });
 
