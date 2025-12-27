@@ -54,7 +54,7 @@ exports.signup = async (req, res) => {
     }
 
     res.status(201).send({
-      message: "User registered successfully!",
+      message: "User registered successfully new!",
       userId: user.id
     });
 
