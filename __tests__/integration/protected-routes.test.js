@@ -35,7 +35,7 @@ const mockVerifyToken = (req, res, next) => {
 
 // Мокаем контроллеры
 app.post('/api/auth/signup', (req, res) => {
-    if (!req.body.username || !req.body.email || !req.body.password) {
+    if (!req.body.username && req.body.email || !req.body.password) {
         return res.status(400).send({ message: 'Required fields missing!' });
     }
     res.status(201).send({
@@ -53,8 +53,8 @@ app.post('/api/auth/signin', (req, res) => {
 
     if (username === 'protectedtest' && password === 'password123') {
         return res.status(200).send({
-            accessToken: 'mock-access-token',
-            refreshToken: 'mock-refresh-token',
+            accessToken: 'mock-access-toketretretn',
+            refreshToken: 'mock-refresh-tokenrtr',
             expiresIn: 900,
             username: 'protectedtest'
         });

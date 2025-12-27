@@ -50,7 +50,7 @@ describe('Auth Middleware', () => {
         expect(jwt.verify).toHaveBeenCalledWith('valid-token', 'test-secret');
         expect(next).toHaveBeenCalled();
         expect(req.userId).toBe(1);
-        expect(req.deviceId).toBe('test1111-device');
+        expect(req.deviceId).toBe('test-device');
     });
 
     test('should return 401 for token without deviceId', () => {
